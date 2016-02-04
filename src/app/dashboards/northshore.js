@@ -22,6 +22,7 @@
  *
  */
 
+'use strict';
 
 
 var dashboard, queries, _d_timespan;
@@ -35,24 +36,8 @@ dashboard = {
   services : {}
 };
 
-dashboard.title = 'Kibana';
+dashboard.title = 'Northshore Default Dashboard';
 dashboard.style = 'light';
-
-if(!_.isUndefined(ARGS.index)) {
-  dashboard.index = {
-    default: ARGS.index,
-    interval: 'none'
-  };
-} else {
-  // Don't fail to default
-  dashboard.failover = false;
-  dashboard.index = {
-    default: ARGS.index||'ADD_A_TIME_FILTER',
-    pattern: ARGS.pattern||'[logstash-]YYYY.MM.DD',
-    interval: ARGS.interval||'day'
-  };
-}
-
 
 
 // In this dashboard we let users pass queries as comma separated list to the query parameter.
@@ -113,7 +98,7 @@ dashboard.rows = [
           "editable": true,
           "type": "terms",
           "loadingEditor": false,
-          "field": "objstat",
+          "field": "obj_status",
           "exclude": [],
           "missing": true,
           "other": true,
@@ -141,7 +126,55 @@ dashboard.rows = [
           "title": "Objstat: Case Sensitive."
         }
       ],
+      "notice": false
     },
-];
+    {
+      "title": "Text",
+      "height": "150px",
+      "editable": true,
+      "collapse": false,
+      "collapsable": true,
+      "panels": [
+        {
+          "error": false,
+          "span": 12,
+          "editable": true,
+          "type": "table",
+          "loadingEditor": false,
+          "size": 100,
+          "pages": 5,
+          "offset": 0,
+          "sort": [
+            "_score",
+            "desc"
+          ],
+          "overflow": "min-height",
+          "fields": [],
+          "highlight": [],
+          "sortable": true,
+          "header": true,
+          "paging": true,
+          "field_list": true,
+          "all_fields": false,
+          "trimFactor": 300,
+          "localTime": false,
+          "timeField": "@timestamp",
+          "spyable": true,
+          "queries": {
+            "mode": "all",
+            "ids": [
+              0
+            ]
+          },
+          "style": {
+            "font-size": "9pt"
+          },
+          "normTimes": true,
+          "title": "Parsed Lines"
+        }
+      ],
+      "notice": false
+    }
+  ];
 
 return dashboard;

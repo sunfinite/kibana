@@ -9,6 +9,7 @@ define([
   'filesaver',
   'blob'
 ],
+
 function (angular, $, kbn, _, config, moment, Modernizr) {
   'use strict';
 
@@ -64,6 +65,64 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
       refresh: false
     };
 
+    var index = '',
+        logmon_id = '',
+        query = '',
+        name = '',
+        email_dashboards = [],
+        displayButtons = true,
+        active = false,
+        admin_email = 'northshore-log-dev@akamai.com',
+        user = 'transient',
+        isGroup = false;
+
+    if ($location.search().index) {
+      index = $location.search().index;
+    }
+
+    if ($location.search().query) {
+      query = $location.search().query;
+    }
+
+    if ($location.search().name) {
+      name = $location.search().name;
+    }
+
+    if ($location.search().id) {
+      logmon_id = $location.search().id;
+    }
+
+    if ($location.search().group) {
+      if ($location.search().group === '1') {
+        isGroup = true;
+      }
+    }
+
+    if ($location.search().active) {
+      if ($location.search().active === '1') {
+        active = true;
+      }
+    }
+      
+    if ($location.search().display) {
+      if ($location.search().display === '0') {
+        displayButtons = false;
+      }
+    }
+
+    if ($location.search().email) {
+      email_dashboards = $location.search().email.split(',');
+    }
+
+    if ($location.search().admin) {
+      admin_email = $location.search().admin_email;
+    }
+
+    if ($location.search().user) {
+      user = $location.search().user;
+    }
+
+    
     // An elasticJS client to use
     var ejs = ejsResource(config.elasticsearch);
 
@@ -194,12 +253,21 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
     };
 
     this.dash_load = function(dashboard) {
+
       // Cancel all timers
       timer.cancel_all();
 
       // Make sure the dashboard being loaded has everything required
       dashboard = dash_defaults(dashboard);
+      dashboard.index.default = index;
 
+      if (query) {
+        dashboard.services.query = {
+          list : { 0: { query: query, id: 0 } },
+          ids : [0]
+        };
+      }
+      
       // If not using time based indices, use the default index
       if(dashboard.index.interval === 'none') {
         self.indices = [dashboard.index.default];
@@ -207,6 +275,11 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
 
       // Set the current dashboard
       self.current = _.clone(dashboard);
+
+      // NORTHSHORE: Remember this processor's default to come back to on pressing home
+      if (!self.default) {
+        self.default = _.clone(self.current);
+      }
 
       // Delay this until we're sure that querySrv and filterSrv are ready
       $timeout(function() {
@@ -234,8 +307,256 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
 
       // Take out any that we're not allowed to add from the gui.
       self.availablePanels = _.difference(self.availablePanels,config.hidden_panels);
+      self.current.displayPDF = true;
+      self.current.isDefault = false;
+      self.current.showLoader = false;
+      if (self.current.title === self.default.title) {
+        self.current.isDefault = true;
+      }
+      if (name) {
+        self.current.processorName = name + ' - ';
+      }
+      self.current.displayButtons = displayButtons;
+      if (!active) {
+        self.current.addEmail = undefined;
+      }
+      else {
+        if (email_dashboards.indexOf(self.current.title) > -1) {
+          self.current.addEmail = false;
+        }
+        else {
+          self.current.addEmail = true;
+        }
+      }
+
+      // Pliny: Move the parent's scroll when a modal pops up at the top of the dashboard.
+      $('body').on('show', '.modal', function() { 
+        var $iframe = $(window.parent.document).find('iframe');
+        if ($iframe.length > 0) {
+          window.parent.$('body').animate({scrollTop: $iframe.offset().top});
+        }
+      });
 
       return true;
+
+    };
+
+
+
+    this.show_error = function(msg) {
+      if(!msg) {
+        msg = ('Sorry, we could not set ' + self.current.title + 
+               ' as your default dashboard. Please try again. ' +
+               'Contact ' + admin_email + ' if the problem persists.');
+      }
+      alertSrv.set("Error", msg, "error");
+    };
+
+    this.make_northshore_request = function(end_point, success_msg, error_msg, callback) {
+      // One day, we too will keep all our data on ES. 
+      self.current.showLoader = true;
+      success_msg = success_msg.replace('DASHBOARD', self.current.title);
+      error_msg = error_msg.replace('DASHBOARD', self.current.title);
+      var display_timeout = 5000;
+
+      error_msg += ' Please try again. Contact ' + admin_email +' if problem persists.';
+      $http.post(
+        window.location.protocol + "//" + window.location.host + '/logmon/' + end_point + '/' +  logmon_id,
+        {"id": end_point === 'get_pdf' ? self.pdf_id : self.current.title,
+         "title": self.current.title, "group": isGroup}
+        ).
+        success(function(data) {
+          if (data === 'true') {
+            if(callback) {
+              callback();
+            }
+            alertSrv.set('Yay!', success_msg, 'success', display_timeout);
+          }
+          else {
+            alertSrv.set('Error', error_msg, 'error', display_timeout);
+          }
+          self.current.showLoader = false;
+        }).
+        error(function() {
+          alertSrv.set('Error', error_msg, 'error', display_timeout);
+          self.current.showLoader = false;
+        });
+    };
+
+    this.fetch_admin_email = function() {
+      $http.get(
+        window.location.protocol + "//" + window.location.host + '/logmon/get_admin_email/'
+      ).
+        success(function(data) {
+          self.admin_email = data;
+        }).
+        error(function(e) {
+          console.log("Error fetching admin email" + e);
+        });
+    };
+
+    this.fetch_frequent_dashboards = function() {
+      if (!self.admin_email) {
+        self.fetch_admin_email();
+      }
+      self.fetching_frequent_dashboards = true;
+      $http.get(
+        window.location.protocol + "//" + window.location.host + '/logmon/list_frequent_dashboards/'
+      ).
+        success(function(data) {
+          self.frequent_dashboards = data;
+          self.fetching_frequent_dashboards = false;
+        }).
+        error(function(e) {
+          console.log("Error fetching frequent dashboards" + e);
+          self.fetching_frequent_dashboards = false;
+        });
+    };
+
+    this.select_dashboard = function(index) {
+      console.log(self.frequent_dashboards[index].name);
+    };
+
+    this.fetch_saved_queries = function() {
+      self.fetching_queries = true;
+      self.fetch_queries_error = false;
+      self.save_new_query_message = '';
+      $http.get(
+        window.location.protocol + "//" + window.location.host + '/logmon/list_queries/'
+      ).
+        success(function(data) {
+          self.saved_queries = data;
+          // store original index for correct lookups even if queries are filtered
+          for (var i=0; i<self.saved_queries.length; i++) {
+            self.saved_queries[i].index = i;
+          }
+          self.fetching_queries = false;
+        }).
+        error(function(e) {
+          console.log(e);
+          self.fetching_queries = false;
+          self.fetch_queries_error = true;
+        });
+    };
+
+    this.save_query = function(index) {
+      var query, name;
+      if (index >= 0) {
+        query = self.saved_queries[index].query;
+        if (!query) {
+          self.saved_queries[index].message = "Query cannot be empty";
+          return false;
+        }
+        name = self.saved_queries[index].name;
+        self.saved_queries[index].message = 'Saving...';
+      }
+      else {
+        self.save_new_query_message = '';
+        if (!(self.save_new_query_name ||  self.save_new_query_query)) {
+          self.save_new_query_message = "Please enter both the query and an alias for it";
+          return false;
+        }
+        query = self.save_new_query_query;
+        name = self.save_new_query_name;
+        self.save_new_query_message = 'Saving...';
+      }
+      var obj = { "query": query, "name": name };
+      $http.post(
+        window.location.protocol + "//" + window.location.host + '/logmon/save_query/', obj).
+        success(function(data) {
+            
+          if (data.match(/updated/i)) {
+            if (index >= 0) {
+              self.saved_queries[index].message = data;
+            }
+            else {
+              var old_obj = $.grep(self.saved_queries, function(q) { return q.name === self.save_new_query_name; });
+              if (old_obj.length > 0) {
+                old_obj[0].query = self.save_new_query_query;
+                self.save_new_query_message = data;
+              }
+            }
+          }
+          else {
+            self.saved_queries.push(obj);
+            self.save_new_query_message = data;
+          }
+        }).
+        error(function(e) {
+          if (index >= 0) {
+            self.saved_queries[index].message = "Error saving query: " + e;
+          }
+          else {
+            self.current.save_query_message = "Error saving query: " + e;
+          }
+        });
+    };
+
+    this.select_query = function(index) {
+      var obj = {
+        'query': self.saved_queries[index].query,
+        'alias': self.saved_queries[index].name
+      };
+      querySrv.set(obj);
+      querySrv.resolve().then(function(){$rootScope.$broadcast('refresh');});
+    };
+
+    this.delete_query = function(index) {
+      self.saved_queries[index].message = 'Deleting...';
+      var obj = {"name": self.saved_queries[index].name};
+      $http.post(window.location.protocol + "//" + window.location.host + '/logmon/delete_query/', obj).
+        success(function(data) {
+          self.save_new_query_message = data;
+          self.saved_queries.splice(index, 1);
+        }).
+        error(function(e) {
+          console.log(e);
+          self.saved_queries[index].message = "Error deleting query: " + e;
+        });
+    };
+
+    this.northshore_set_default = function() {
+      self.make_northshore_request('set_default', 
+                                   'This is your new default dashboard.',
+                                   'Sorry, we could not set DASHBOARD as your default.',
+                                   function() { self.default = _.clone(self.current); self.current.isDefault = true; });
+    };
+
+    this.northshore_load_default = function() {
+      self.dash_load(self.default);
+    };
+
+    this.get_pdf = function() {
+      self.elasticsearch_save('temp', self.current.title, 50000).then(
+        function(result) {
+        if(!_.isUndefined(result)) {
+          if(!_.isUndefined(result._id)) {
+            self.pdf_id = result._id;
+            self.make_northshore_request('get_pdf',
+                                   'PDF request was successful. We will email it to you soon.',
+                                   'Sorry, we could not process your PDF request.');
+          }
+        } else {
+          alertSrv.set('Error','Sorry, we could not process your PDF request.','error',5000);
+        }
+      });
+    };
+
+    this.add_email = function() {
+      self.make_northshore_request('add_email', 
+                                   'DASHBOARD has been added to your email report.',
+                                   'Sorry, we could not add DASHBOARD to your email report.',
+                                   function() { email_dashboards.push(self.current.title); self.current.addEmail = false; });
+    };
+
+    this.remove_email = function() {
+      self.make_northshore_request('remove_email', 
+                                   'DASHBOARD has been removed from your email report.',
+                                   'Sorry, we could not remove DASHBOARD from your email report.',
+                                    function() { 
+                                      email_dashboards.splice(email_dashboards.indexOf(self.current.title), 1);
+                                      self.current.addEmail = true; 
+                                    });
     };
 
     this.gist_id = function(string) {
@@ -266,7 +587,7 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
           delete window.localStorage['dashboard'];
         }
         window.localStorage.kibanaDashboardDefault = route;
-        return true;
+        
       } else {
         return false;
       }
@@ -288,11 +609,15 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
 
     // TOFIX: Pretty sure this breaks when you're on a saved dashboard already
     this.share_link = function(title,type,id) {
+      // replacing window.location
+      var northshore_share = document.referrer;
+      var index = northshore_share.indexOf('?');
+      var new_location = index > 0 ? northshore_share.substr(0, index) : northshore_share;
       return {
-        location  : window.location.href.substr(0, window.location.href.indexOf('#')),
+        location  : new_location,
         type      : type,
         id        : id,
-        link      : window.location.href.substr(0, window.location.href.indexOf('#'))+"#dashboard/"+type+"/"+encodeURIComponent(id),
+        link      : new_location +"?dashboard=" + encodeURI(id) + "&type=" + type,
         title     : title
       };
     };
@@ -447,6 +772,68 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
       );
     };
 
+    this.northshore_elasticsearch_save = function(type,title) {
+      // Clone object so we can modify it without influencing the existing obejct
+      var save = _.clone(self.current);
+      var id;
+
+      // Change title on object clone
+      if (type === 'dashboard') {
+        id = save.title = _.isUndefined(title) ? self.current.title : title;
+      }
+
+      return $http.post(
+        window.location.protocol + "//" + window.location.host + '/logmon/save_dashboard',
+        {
+          "title": save.title,
+          "dashboard": angular.toJson(save)
+        }
+      ).
+        success(function(data) {
+          if (save.title !== self.default.title) {
+            self.current.isDefault = false;
+          }
+          return data;
+        }).
+        error(function(data, status) {
+          var msg;
+          if (status === 403) {
+            msg = 'Permission error.';
+            msg += 'If you are trying to edit an existing dashboard which was not created by you, please save it with a different name.';
+          }
+          else {
+            msg = 'Dashboard could not be saved. Error was: ' + data;
+          }
+          msg += ' Please contact ' + admin_email + ' if problem persists.';
+          alertSrv.set('Save failed',msg,'error',25000);
+          return false;
+        });
+    };
+
+    this.northshore_elasticsearch_delete = function(id) {
+      return $http.post(
+        window.location.protocol + "//" + window.location.host + '/logmon/delete_dashboard',
+        {
+          "id": id
+        }
+      ).
+        success(function(data) {
+          return data;
+        }).
+        error(function(data, status) {
+          var msg;
+          if (status === 403) {
+            msg = 'Permission error. You cannot delete a dashboard you did not create.';
+          }
+          else {
+            msg = 'Dashboard could not be deleted. Error was: ' + data;
+          }
+          msg += ' Please contact ' + admin_email + ' if problem persists.';
+          alertSrv.set('Delete failed',msg,'error',25000);
+          return false;
+        });
+    };
+
     this.elasticsearch_list = function(query,count) {
       var request = ejs.Request().indices(config.kibana_index).types('dashboard');
       return request.query(
@@ -524,8 +911,5 @@ function (angular, $, kbn, _, config, moment, Modernizr) {
         this.cancel_scheduled_refresh();
       }
     };
-
-
   });
-
 });

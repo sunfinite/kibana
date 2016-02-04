@@ -29,7 +29,11 @@ function (Settings) {
      *  +elasticsearch: {server: "http://localhost:9200", withCredentials: true}+
      *
      */
-    elasticsearch: "http://"+window.location.hostname+":9200",
+    //elasticsearch: "//" + window.location.hash.match(/host=(.+)?/)[1].split('&')[0] + ":9200",
+    //elasticsearch: "//" + window.location.hostname + "/query_" + window.location.hash.match(/cluster=(.+)?/)[1].split('&')[0],
+    //elasticsearch: "//" + window.location.hash.match(/host=(.+)?/)[1].split('&')[0] + "/query_" + window.location.hash.match(/cluster=(.+)?/)[1].split('&')[0],
+    elasticsearch: (window.location.hash.match(/protocol=(.+)?/) || ['', 'https'])[1].split('&')[0] + "://" + window.location.hash.match(/host=(.+)?/)[1].split('&')[0] + "/" + window.location.hash.match(/endpoint=(.+)?/)[1].split('&')[0],
+
 
     /** @scratch /configuration/config.js/5
      *
@@ -41,7 +45,7 @@ function (Settings) {
      *
      * default_route: '/dashboard/elasticsearch/WebLogs',
      */
-    default_route     : '/dashboard/file/default.json',
+    default_route     : '/dashboard/elasticsearch/Performance Dashboard',
 
     /** @scratch /configuration/config.js/5
      *

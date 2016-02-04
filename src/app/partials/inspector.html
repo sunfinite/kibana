@@ -5,7 +5,9 @@
 <div class="modal-body">
 
   <div>
-    <pre>curl -XGET '{{config.elasticsearch}}/{{dashboard.indices|stringify}}/_search?pretty' -d '{{inspector}}'
+    <small> Output(in JSON) is writtern to a file named  output.json. Please change as needed</small>
+    <br />
+    <pre>curl -XGET -ksS -D - -o output.json '{{config.elasticsearch}}/{{dashboard.indices|stringify}}/_search?pretty' -d '{{inspector}}'
     </pre>
   </div>
   

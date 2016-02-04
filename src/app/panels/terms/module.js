@@ -32,6 +32,13 @@ function (angular, app, _, $, kbn) {
           icon: "icon-info-sign",
           partial: "app/partials/inspector.html",
           show: $scope.panel.spyable
+        },
+        {
+          description: "CSV",
+          text: "CSV",
+          //icon: "icon-table",
+          partial: "app/partials/csv.html",
+          show: true,
         }
       ],
       editorTabs : [
@@ -125,7 +132,9 @@ function (angular, app, _, $, kbn) {
       /** @scratch /panels/terms/5
        * valuefield:: Terms_stats facet value field
        */
-      valuefield  : ''
+      valuefield  : '',
+      /**Pliny: fetch_all terms buckets while downloading CSV*/
+      fetch_all : false
     };
 
     _.defaults($scope.panel,_d);
@@ -166,12 +175,17 @@ function (angular, app, _, $, kbn) {
         boolQuery = boolQuery.should(querySrv.toEjsObj(q));
       });
 
+      var size = $scope.panel.size;
+      if ($scope.panel.fetch_all) {
+        size = Math.pow(10, 9);
+      }
+
       // Terms mode
       if($scope.panel.tmode === 'terms') {
         request = request
           .facet($scope.ejs.TermsFacet('terms')
           .field($scope.field)
-          .size($scope.panel.size)
+          .size(size)
           .order($scope.panel.order)
           .exclude($scope.panel.exclude)
           .facetFilter($scope.ejs.QueryFilter(
@@ -185,7 +199,7 @@ function (angular, app, _, $, kbn) {
           .facet($scope.ejs.TermStatsFacet('terms')
           .valueField($scope.panel.valuefield)
           .keyField($scope.field)
-          .size($scope.panel.size)
+          .size(size)
           .order($scope.panel.order)
           .facetFilter($scope.ejs.QueryFilter(
             $scope.ejs.FilteredQuery(
@@ -194,10 +208,10 @@ function (angular, app, _, $, kbn) {
             )))).size(0);
       }
 
+      results = request.doSearch();
+
       // Populate the inspector panel
       $scope.inspector = angular.toJson(JSON.parse(request.toString()),true);
-
-      results = request.doSearch();
 
       // Populate scope when we have results
       results.then(function(results) {
@@ -207,8 +221,10 @@ function (angular, app, _, $, kbn) {
         }
 
         $scope.results = results;
-
-        $scope.$emit('render');
+        //Pliny: fetch_all is only set from the download CSV modal.
+        if (! $scope.panel.fetch_all) {
+          $scope.$emit('render');
+        }
       });
     };
 
@@ -249,6 +265,27 @@ function (angular, app, _, $, kbn) {
       return true;
     };
 
+    $scope.export_csv = function() {
+      var csv = '';
+
+      if($scope.panel.fetch_all) {
+        $scope.get_data();
+      }
+
+      _.each($scope.results.facets.terms.terms, function(v) {
+        csv += v.term + ',' + v.count + '\n';
+      });
+
+      if($scope.panel.missing === true) {
+        csv += 'Missing' + ',' + $scope.results.facets.terms.missing + '\n';
+      }
+      if($scope.panel.other === true) {
+        csv += 'Other' + ',' + $scope.results.facets.terms.other + '\n';
+      }
+      var fileName = dashboard.current.processorName + dashboard.current.title + ':' + $scope.field + '.csv';
+      var blob = new Blob([csv], { type: "text/csv" });
+      window.saveAs(blob, fileName);
+    };
   });
 
   module.directive('termsChart', function(querySrv) {

@@ -1,0 +1,43 @@
+<div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+  <h4>Frequently Used Dashboards</h4>
+</div>
+<div class="modal-body">
+   <style>
+     .dashboard {
+        margin-bottom: 10px;
+     }
+
+     .dashboard-name:hover {
+        font-size: 13pt;
+     }
+
+     .dashboard-type {
+        font-family: 'arial';
+      }
+      
+      
+   </style>
+   <div class="section">
+     <div ng-show="dashboard.fetching_frequent_dashboards === true"> Fetching dashboards... </div>
+     <div>
+       <h4> Please contact {{ dashboard.admin_email }} to add a dashboard to this list. </h4>
+       <h5 ng-hide="dashboard.frequent_dashboards.length"> No curated dashboards. </h5>
+       <h5 ng-show="dashboard.frequent_dashboards.length"> Click on a dashboard below to load </h5>
+
+       <div ng-show="dashboard.frequent_dashboards.length" > 
+          <i class="icon-search"></i>
+          <input type="text" class="input-large" ng-model="search_query" placeholder="Filter dashboards">
+       </div>
+
+       <div class="dashboard" ng-repeat="d in dashboard.frequent_dashboards | filter: search_query" ng-click="select_dashboard($index);dismiss();">
+        <a href='#/dashboard/elasticsearch/{{d.name}}' class="dashboard-name"> {{$index + 1}}. {{d.name}}
+        <span  class="dashboard-type">({{d.type}})</span></a>
+       </div>
+     </div>
+  <div>
+  <br />
+  <button type="button" class="btn btn-success" ng-click="dismiss()">Close</button>
+</div>
+<div class="modal-footer">
+</div>

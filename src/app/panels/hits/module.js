@@ -271,7 +271,8 @@ define([
               });
             }
           } catch(e) {
-            elem.text(e);
+            //elem.text(e);
+            console.log(e);
           }
         }
 

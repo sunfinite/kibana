@@ -1,0 +1,32 @@
+<div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+  <h4>Export to CSV</h4>
+</div>
+<div class="modal-body">
+  <div>
+    <label>Number of rows</label>
+    <!-- Choosing to disable these for now,
+       one to keep things simple and in one place,
+       two it also gives us a chance to tell people about how to configure panels
+    -->
+    <!-- Use panel.order to tell apart terms from table, flaky -->
+    <div ng-show="panel.order">
+    <input type="text" disabled="true" ng-model="panel.size" ng-hide="data.size">
+    <div>
+    <label>Sort by</label>
+    <input type="text" disabled="true" ng-model="panel.order">
+    </div>
+    <label>To change number of rows or sort order, click on the <i class="icon-cog"></i> button to the right of the CSV button you just clicked and set the values of 'Length' and 'Order' fields in the 'Panel' tab respectively.</label>
+    <br />
+    <label><input type="checkbox" ng-model="panel.fetch_all"> &nbsp;Or fetch all rows</label>
+    <br/>
+    </div>
+    <div ng-hide="panel.order">
+    <input type="text" disabled="true" value="{{ panel.size * panel.pages }}">
+    </div>
+    <button type="button" class="btn btn-success" ng-click="export_csv()">Download</button>
+    <button type="button" class="btn btn-success" ng-click="dismiss()">Close</button>
+  </div>
+</div>
+<div class="modal-footer">
+</div>

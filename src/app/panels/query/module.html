@@ -10,6 +10,7 @@
         <input class="search-query panel-query" ng-disabled="!dashboard.current.services.query.list[id].enable" ng-class="{ 'input-block-level': unPinnedQueries.length==1, 'last-query': $last, 'has-remove': dashboard.current.services.query.ids.length > 1 }" bs-typeahead="panel.history" data-min-length=0 data-items=100 type="text" ng-model="dashboard.current.services.query.list[id].query" />
       </span>
       <span class="end-query">
+        <i class="icon-save pointer" ng-click="dashboard.save_new_query_name=dashboard.current.services.query.list[id].alias; dashboard.save_new_query_query=dashboard.current.services.query.list[id].query; fetch_saved_queries()" bs-modal="'app/partials/savedQueries.html'"></i>
         <i class="icon-search pointer" ng-click="refresh()" ng-show="$last"></i>
         <i class="icon-plus pointer" ng-click="querySrv.set({})" ng-show="$last"></i>
       </span>

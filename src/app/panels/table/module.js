@@ -35,6 +35,13 @@ function (angular, app, _, kbn, moment) {
           icon: "icon-info-sign",
           partial: "app/partials/inspector.html",
           show: $scope.panel.spyable
+        },
+        {
+          description: "CSV",
+          text: "CSV",
+          //icon: "icon-table",
+          partial: "app/partials/csv.html",
+          show: true,
         }
       ],
       editorTabs : [
@@ -466,6 +473,22 @@ function (angular, app, _, kbn, moment) {
       return obj;
     };
 
+    $scope.export_csv = function() {
+      var csv_list = [];
+      var fields = $scope.panel.fields.length > 0 ? $scope.panel.fields : $scope.current_fields;
+      csv_list.push(fields.join(','));
+      _.each($scope.data, function(row) {
+        var row_list = [];
+        _.each(fields, function(field) {
+          row_list.push(row.kibana._source[field]);
+        });
+        csv_list.push(row_list.join(','));
+      });
+
+      var fileName = dashboard.current.processorName + dashboard.current.title + ':' + $scope.panel.title + '.csv';
+      var blob = new Blob([csv_list.join('\n')], { type: "text/csv" });
+      window.saveAs(blob, fileName);
+    };
 
   });
 

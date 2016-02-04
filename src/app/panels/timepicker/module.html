@@ -18,6 +18,7 @@
             to
             <span class="pointer" ng-hide="panel.now" >{{time.to.date | date:'MMM d, y HH:mm:ss'}}</span>
             <span class="pointer" ng-show="panel.now">{{time.to.date | moment:'ago'}}</span>
+            <span class="pointer" style="font-size:8pt">(Browser Time)</span>
           </span>
           <span ng-hide="filterSrv.idsByType('time').length">Time filter</span>
           <span ng-show="dashboard.current.refresh" class="text-warning">refreshed every {{dashboard.current.refresh}} </span>

@@ -24,6 +24,8 @@ function (angular, _, config) {
     };
 
     var getVersions = function() {
+      //FIXME: Pliny: Hack to avoid calls to _cat/nodes. This version can be passed during page load.
+      self.versions = ['1.4.4'];
       if(self.versions.length !== 0) {
         defer.resolve(self.versions);
         return defer.promise;

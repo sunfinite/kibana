@@ -54,7 +54,8 @@ function (angular,$) {
 
             '<span ng-repeat="task in panelMeta.modals" class="row-button extra" ng-show="task.show">' +
               '<span bs-modal="task.partial" class="pointer"><i ' +
-                'bs-tooltip="task.description" ng-class="task.icon" class="pointer"></i></span>'+
+                'bs-tooltip="task.description" ng-class="task.icon" class="pointer"></i>' +
+                '<span ng-bind-html="task.text" style="font-size:10pt"></span></span>'+
             '</span>' +
 
             '<span class="row-button extra" ng-show="panelMeta.loading == true">' +

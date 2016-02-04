@@ -37,7 +37,7 @@
         <form name="input">
 
         <div class="timepicker-from-column">
-          <label class="small">From</label>
+          <label class="small">From (Browser Time)</label>
           <div class="fake-input timepicker-input">
             <input class="timepicker-date" type="text" ng-change="validate(temptime)" ng-model="temptime.from.date" data-date-format="yyyy-mm-dd" required bs-datepicker />@
             <input class="timepicker-hms" type="text" maxlength="2" ng-change="validate(temptime)" ng-model="temptime.from.hour" required ng-pattern="patterns.hour" onClick="this.select();"/>:
@@ -49,7 +49,7 @@
 
         <div class="timepicker-to-column">
 
-          <label class="small">To (<a class="link" ng-class="{'strong':panel.now}" ng-click="setNow();panel.now=true">now</a>)</label>
+          <label class="small">To (Browser Time) (<a class="link" ng-class="{'strong':panel.now}" ng-click="setNow();panel.now=true">now</a>)</label>
 
           <div class="fake-input timepicker-input">
             <div ng-hide="panel.now">

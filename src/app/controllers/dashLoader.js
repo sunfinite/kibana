@@ -7,7 +7,7 @@ function (angular, _) {
 
   var module = angular.module('kibana.controllers');
 
-  module.controller('dashLoader', function($scope, $http, timer, dashboard, alertSrv, $location) {
+  module.controller('dashLoader', function($scope, $http, timer, dashboard, alertSrv) {
     $scope.loader = dashboard.current.loader;
 
     $scope.init = function() {
@@ -35,11 +35,48 @@ function (angular, _) {
     };
 
     $scope.set_default = function() {
-      if(dashboard.set_default($location.path())) {
+      /*if(dashboard.set_default($location.path())) {
         alertSrv.set('Home Set','This page has been set as your default Kibana dashboard','success',5000);
       } else {
         alertSrv.set('Incompatible Browser','Sorry, your browser is too old for this feature','error',5000);
-      }
+      }*/
+      dashboard.northshore_set_default();
+    };
+
+    $scope.get_pdf = function() {
+      dashboard.get_pdf();
+    };
+
+    $scope.add_email = function() {
+      dashboard.add_email();
+    };
+
+    $scope.remove_email = function() {
+      dashboard.remove_email();
+    };
+
+    $scope.fetch_saved_queries = function() {
+      dashboard.fetch_saved_queries();
+    };
+
+    $scope.fetch_frequent_dashboards = function() {
+      dashboard.fetch_frequent_dashboards();
+    };
+
+    $scope.save_query = function(index) {
+      dashboard.save_query(index);
+    };
+
+    $scope.select_query = function(index) {
+      dashboard.select_query(index);
+    };
+
+    $scope.select_dashboard = function(index) {
+      dashboard.select_dashboard(index);
+    };
+
+    $scope.delete_query = function(index) {
+      dashboard.delete_query(index);
     };
 
     $scope.purge_default = function() {
@@ -51,18 +88,28 @@ function (angular, _) {
       }
     };
 
+    $scope.load_default = function() {
+      dashboard.northshore_load_default();
+    };
+
     $scope.elasticsearch_save = function(type,ttl) {
-      dashboard.elasticsearch_save(
+      var save_func = type === 'temp' ? dashboard.elasticsearch_save : dashboard.northshore_elasticsearch_save;
+      dashboard.current.showLoader = true;
+      save_func(
         type,
         ($scope.elasticsearch.title || dashboard.current.title),
         ($scope.loader.save_temp_ttl_enable ? ttl : false)
       ).then(
         function(result) {
-        if(!_.isUndefined(result._id)) {
-          alertSrv.set('Dashboard Saved','This dashboard has been saved to Elasticsearch as "' +
-            result._id + '"','success',5000);
-          if(type === 'temp') {
-            $scope.share = dashboard.share_link(dashboard.current.title,'temp',result._id);
+        dashboard.current.showLoader = false;
+        result = result.data || result;
+        if(!_.isUndefined(result)) {
+          if(!_.isUndefined(result._id)) {
+            alertSrv.set('Dashboard Saved','This dashboard has been saved to Elasticsearch as "' +
+              result._id + '"','success',5000);
+            if(type === 'temp') {
+              $scope.share = dashboard.share_link(dashboard.current.title,'temp',result._id);
+            }
           }
         } else {
           alertSrv.set('Save failed','Dashboard could not be saved to Elasticsearch','error',5000);
@@ -71,8 +118,11 @@ function (angular, _) {
     };
 
     $scope.elasticsearch_delete = function(id) {
-      dashboard.elasticsearch_delete(id).then(
+      dashboard.current.showLoader = true;
+      dashboard.northshore_elasticsearch_delete(id).then(
         function(result) {
+          dashboard.current.showLoader = false;
+          result = result.data || result;
           if(!_.isUndefined(result)) {
             if(result.found) {
               alertSrv.set('Dashboard Deleted',id+' has been deleted','success',5000);
@@ -90,8 +140,10 @@ function (angular, _) {
     };
 
     $scope.elasticsearch_dblist = function(query) {
+      dashboard.current.showLoader = true;
       dashboard.elasticsearch_list(query,$scope.loader.load_elasticsearch_size).then(
         function(result) {
+        dashboard.current.showLoader = false;
         if(!_.isUndefined(result.hits)) {
           $scope.hits = result.hits.total;
           $scope.elasticsearch.dashboards = result.hits.hits;

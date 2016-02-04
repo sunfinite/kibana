@@ -1,0 +1,89 @@
+<div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+  <h4>Saved queries</h4>
+</div>
+<div class="modal-body">
+   <style>
+     .query-display {
+        margin-top: 0px;
+        border-bottom: 1px #C8C8C8 solid;
+        cursor: pointer;
+        font-size: 13pt;
+        padding-bottom: 5px;
+        padding-top: 5px;
+      }
+
+      .query-display:hover {
+        font-size: 14pt;
+        background-color: #F8F8F8;
+      } 
+
+      .query-view-link {
+        margin-left: 20px;
+        font-size: 8pt;
+        color: #424242;
+      }
+
+      .query-view-div {
+        margin-top: 5px;
+      }
+
+      .query-display:last-child {
+        border-bottom: 0;
+      }
+
+      .query-name {
+        color: #848484;
+      }
+
+      .message {
+        color: #800000;
+        font-size: 9pt;
+        font-weight: bold;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+    </style>
+   <div class="section">   
+     <h5> Add a new query </h5>
+     <div class="editor-option">
+       <label class="small">Query Alias</label><input type="text" class="input-large" ng-model='dashboard.save_new_query_name' placeholder="All client hits"></input>
+     </div>
+     <div class="editor-option">
+       <label class="small">Query</label><input type="text" class="input-xxlarge" ng-model='dashboard.save_new_query_query' placeholder="rt:R OR rt:S"></input>
+     </div>
+     <div>
+       <button class="btn btn-success" ng-click="save_query()">Save</button>
+     </div>
+     <div class="message" ng-bind="dashboard.save_new_query_message"></div>
+   </div>
+
+   <div ng-show="dashboard.fetching_queries === true"> Fetching queries... </div>
+   <div >
+     <h5 ng-hide="dashboard.saved_queries.length"> No saved queries </h5>
+     <h5 ng-show="dashboard.fetch_queries_error"> Error fetching saved queries </h5>
+     <h5 ng-show="dashboard.saved_queries.length"> Click on a query below to apply </h5>
+
+     <div ng-show="dashboard.saved_queries.length" > 
+        <i class="icon-search"></i>
+        <input type="text" class="input-large" ng-model="search_query" placeholder="Filter queries">
+     </div>
+
+     <div ng-repeat="q in dashboard.saved_queries | filter: search_query" class="query-display" ng-click="select_query(q.index);dismiss();">
+      <span  class="query-name"> {{q.index + 1}}. {{q.name}} </span>
+      <a href="javascript:void(0)" class="query-view-link" ng-show="!dashboard.saved_queries[q.index].showQuery" ng-click="dashboard.saved_queries[q.index].message = ''; dashboard.saved_queries[q.index].showQuery = true; $event.stopPropagation();">View</a>
+      <div class="editor-row query-view-div" ng-show="dashboard.saved_queries[q.index].showQuery === true">
+         <input type="text" ng-click="$event.stopPropagation();" class="input-xxlarge" ng-model="q.query" />&nbsp;
+         <button class="btn btn-small" ng-click="save_query(q.index); $event.stopPropagation();">Save</button>
+         <button class="btn btn-small" ng-click="delete_query(q.index); $event.stopPropagation();">Delete</button>
+         <a href="javascript:void(0)" class="query-view-link" ng-show="dashboard.saved_queries[q.index].showQuery === true" ng-click="dashboard.saved_queries[q.index].showQuery = false; $event.stopPropagation();">Hide</a>
+         <span class="message" ng-bind="dashboard.saved_queries[q.index].message"></span>
+      </div> 
+     </div>
+   </div>
+  <div>
+  <br />
+  <button type="button" class="btn btn-success" ng-click="dismiss()">Close</button>
+</div>
+<div class="modal-footer">
+</div>
